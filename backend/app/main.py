@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.schemas.documents import DocumentRecord, DocumentUploadResponse
+from app.services.documents import create_document, list_documents
 
 settings = get_settings()
 
@@ -27,3 +29,17 @@ def health() -> dict[str, str]:
         "service": settings.app_name,
         "version": settings.api_version,
     }
+
+
+@app.get("/documents", response_model=list[DocumentRecord])
+def get_documents() -> list[DocumentRecord]:
+    return list_documents()
+
+
+@app.post("/documents", response_model=DocumentUploadResponse)
+async def upload_document(file: UploadFile = File(...)) -> DocumentUploadResponse:
+    document = await create_document(file)
+    return DocumentUploadResponse(
+        document=document,
+        message="Document uploaded successfully.",
+    )
