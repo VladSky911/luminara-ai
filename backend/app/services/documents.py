@@ -10,6 +10,7 @@ DOCUMENT_CHUNKS: dict[str, list[DocumentChunk]] = {}
 
 async def create_document(file: UploadFile) -> DocumentRecord:
     content = await file.read()
+    text = await extract_text(file, content)
 
     document = DocumentRecord(
         filename=file.filename or "untitled",
@@ -18,7 +19,6 @@ async def create_document(file: UploadFile) -> DocumentRecord:
         status="processing",
     )
 
-    text = await extract_text(file, content)
     chunks = chunk_text(text, document.id)
 
     document = document.model_copy(
