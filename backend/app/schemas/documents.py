@@ -12,6 +12,12 @@ class DocumentChunk(BaseModel):
     token_estimate: int
 
 
+class EmbeddingPreview(BaseModel):
+    chunk_id: str
+    dimensions: int
+    preview: list[float]
+
+
 class DocumentRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     filename: str

@@ -8,6 +8,7 @@ app/schemas/documents.py
 app/services/__init__.py
 app/services/chunking.py
 app/services/documents.py
+app/services/embeddings.py
 app/services/text_extraction.py
 luminara_backend.egg-info/PKG-INFO
 luminara_backend.egg-info/SOURCES.txt
