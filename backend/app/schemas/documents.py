@@ -4,12 +4,21 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 
+class DocumentChunk(BaseModel):
+    id: str
+    document_id: str
+    chunk_index: int
+    text: str
+    token_estimate: int
+
+
 class DocumentRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     filename: str
     content_type: str
     size_bytes: int
     status: str = "uploaded"
+    chunk_count: int = 0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
