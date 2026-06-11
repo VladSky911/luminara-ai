@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_embedding_model: str = "text-embedding-3-small"
 
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_collection: str = "luminara_chunks"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

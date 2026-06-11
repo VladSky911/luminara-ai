@@ -10,6 +10,8 @@ from app.schemas.documents import (
 )
 from app.services.documents import create_document, get_document_chunks, list_documents
 from app.services.embeddings import embed_texts
+from app.schemas.search import SearchRequest, SearchResult
+from app.services.vector_store import semantic_search
 
 settings = get_settings()
 
@@ -69,6 +71,10 @@ async def get_embedding_preview(document_id: str) -> list[EmbeddingPreview]:
         )
         for chunk, vector in zip(chunks[:3], vectors, strict=True)
     ]
+
+@app.post("/search", response_model=list[SearchResult])
+async def search(request: SearchRequest) -> list[SearchResult]:
+    return await semantic_search(request.query, request.top_k)
 
 
 @app.post("/documents", response_model=DocumentUploadResponse)

@@ -3,6 +3,7 @@ from fastapi import UploadFile
 from app.schemas.documents import DocumentChunk, DocumentRecord
 from app.services.chunking import chunk_text
 from app.services.text_extraction import extract_text
+from app.services.vector_store import index_document_chunks
 
 DOCUMENTS: dict[str, DocumentRecord] = {}
 DOCUMENT_CHUNKS: dict[str, list[DocumentChunk]] = {}
@@ -20,6 +21,9 @@ async def create_document(file: UploadFile) -> DocumentRecord:
     )
 
     chunks = chunk_text(text, document.id)
+
+    if chunks:
+        await index_document_chunks(document, chunks)
 
     document = document.model_copy(
         update={

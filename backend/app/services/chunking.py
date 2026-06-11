@@ -1,3 +1,5 @@
+from uuid import NAMESPACE_URL, uuid5
+
 from app.schemas.documents import DocumentChunk
 
 
@@ -21,9 +23,10 @@ def chunk_text(
         chunk = normalized[start:end].strip()
 
         if chunk:
+            chunk_id = str(uuid5(NAMESPACE_URL, f"{document_id}:{index}"))
             chunks.append(
                 DocumentChunk(
-                    id=f"{document_id}:{index}",
+                    id=chunk_id,
                     document_id=document_id,
                     chunk_index=index,
                     text=chunk,

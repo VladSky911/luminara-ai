@@ -5,7 +5,7 @@ from openai import AsyncOpenAI
 
 from app.core.config import get_settings
 
-LOCAL_EMBEDDING_DIMENSIONS = 384
+LOCAL_EMBEDDING_DIMENSIONS = 1536
 
 
 async def embed_texts(texts: list[str]) -> list[list[float]]:
