@@ -83,3 +83,21 @@ Retrieval Trace In UI
 
 
 ```
+
+## Screenshots
+
+### Dashboard
+
+![Luminara AI dashboard](docs/images/dashboard.png)
+
+### RAG Answer With Citations
+
+![RAG answer with citations](docs/images/ask-flow.png)
+
+### Source Trace
+
+![Source trace panel](docs/images/source-trace.png)
+
+### Backend
+
+![Source trace panel](docs/images/backend.png)
