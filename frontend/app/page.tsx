@@ -1,8 +1,12 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot,
   FileText,
   Gauge,
   Layers3,
+  Loader2,
   MessageSquare,
   Search,
   ShieldCheck,
@@ -10,46 +14,88 @@ import {
   UploadCloud,
 } from "lucide-react";
 
-const documents = [
-  {
-    name: "Customer onboarding.md",
-    status: "Indexed",
-    chunks: 8,
-    tone: "bg-[#d9ff8f]",
-  },
-  {
-    name: "Security policy.pdf",
-    status: "Indexed",
-    chunks: 14,
-    tone: "bg-[#9ee7ff]",
-  },
-  {
-    name: "Product notes.docx",
-    status: "Processing",
-    chunks: 5,
-    tone: "bg-[#ffd98f]",
-  },
-];
+import { DocumentRecord, fetchDocuments, uploadDocument } from "@/lib/api";
 
 const traces = [
   {
-    title: "Security policy.pdf",
-    score: "0.93",
-    text: "Enterprise customers may request a 30-day, 90-day, or 365-day retention window.",
-  },
-  {
-    title: "Customer onboarding.md",
-    score: "0.88",
-    text: "Production rollout begins after the pilot owner approves retrieval quality.",
-  },
-  {
-    title: "Product notes.docx",
-    score: "0.81",
-    text: "Answers should include source references and expose the evidence chain.",
+    title: "Waiting for search",
+    score: "0.00",
+    text: "Upload documents first. Retrieval traces will appear here once questions are connected to the RAG endpoint.",
   },
 ];
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function statusTone(status: string) {
+  if (status === "indexed") return "bg-[#d9ff8f]";
+  if (status === "processing") return "bg-[#ffd98f]";
+  if (status === "failed") return "bg-[#ff9e9e]";
+  return "bg-[#9ee7ff]";
+}
+
 export default function Home() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const indexedCount = useMemo(
+    () => documents.filter((document) => document.status === "indexed").length,
+    [documents],
+  );
+
+  const chunkCount = useMemo(
+    () =>
+      documents.reduce((total, document) => total + document.chunk_count, 0),
+    [documents],
+  );
+
+  async function loadDocuments() {
+    setError("");
+    setLoadingDocuments(true);
+
+    try {
+      setDocuments(await fetchDocuments());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load documents");
+    } finally {
+      setLoadingDocuments(false);
+    }
+  }
+
+  async function handleFileChange(file: File | null) {
+    if (!file) return;
+
+    setError("");
+    setUploading(true);
+
+    try {
+      const document = await uploadDocument(file);
+      setDocuments((current) => [
+        document,
+        ...current.filter((item) => item.id !== document.id),
+      ]);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to upload document",
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  useEffect(() => {
+    loadDocuments();
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#f6f3ec] text-[#171412]">
       <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
@@ -103,40 +149,81 @@ export default function Home() {
               </h1>
             </div>
 
-            <button className="flex items-center gap-2 rounded-2xl bg-[#171412] px-4 py-3 text-sm font-medium text-white">
-              <UploadCloud size={17} />
-              Upload
+            <input
+              ref={fileInputRef}
+              className="hidden"
+              type="file"
+              accept=".txt,.md,.pdf,.docx"
+              onChange={(event) =>
+                handleFileChange(event.target.files?.[0] ?? null)
+              }
+            />
+
+            <button
+              className="flex items-center gap-2 rounded-2xl bg-[#171412] px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="animate-spin" size={17} />
+              ) : (
+                <UploadCloud size={17} />
+              )}
+              {uploading ? "Indexing" : "Upload"}
             </button>
           </header>
+
+          {error ? (
+            <div className="mx-5 mt-5 rounded-2xl border border-[#f0b5a9] bg-[#fff0ec] px-4 py-3 text-sm text-[#8a321f]">
+              {error}
+            </div>
+          ) : null}
 
           <div className="grid flex-1 gap-5 p-5 xl:grid-cols-[360px_1fr_380px]">
             <section className="rounded-[1.6rem] border border-black/10 bg-white/70 p-4 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-semibold">Documents</h2>
                 <span className="rounded-full bg-[#171412] px-3 py-1 text-xs text-white">
-                  3 files
+                  {documents.length} files
                 </span>
               </div>
 
               <div className="space-y-3">
-                {documents.map((doc) => (
-                  <article
-                    key={doc.name}
-                    className="rounded-3xl border border-black/10 bg-white p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-1 h-3 w-3 rounded-full ${doc.tone}`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{doc.name}</div>
-                        <div className="mt-1 text-sm text-[#6a645b]">
-                          {doc.status} · {doc.chunks} chunks
+                {loadingDocuments ? (
+                  <div className="flex items-center gap-2 rounded-3xl border border-black/10 bg-white p-4 text-sm text-[#6a645b]">
+                    <Loader2 className="animate-spin" size={16} />
+                    Loading documents
+                  </div>
+                ) : documents.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-black/20 bg-white/60 p-5 text-sm leading-6 text-[#6a645b]">
+                    Upload a PDF, DOCX, Markdown, or text file to build the
+                    knowledge base.
+                  </div>
+                ) : (
+                  documents.map((doc) => (
+                    <article
+                      key={doc.id}
+                      className="rounded-3xl border border-black/10 bg-white p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`mt-1 h-3 w-3 rounded-full ${statusTone(doc.status)}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">
+                            {doc.filename}
+                          </div>
+                          <div className="mt-1 text-sm capitalize text-[#6a645b]">
+                            {doc.status} · {doc.chunk_count} chunks
+                          </div>
+                          <div className="mt-2 text-xs text-[#8a8378]">
+                            {formatBytes(doc.size_bytes)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))
+                )}
               </div>
             </section>
 
@@ -154,32 +241,30 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-black/10 bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm text-[#6a645b]">
-                    <Search size={16} />
-                    Question
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-3xl border border-black/10 bg-white p-4">
+                    <div className="text-2xl font-semibold">{indexedCount}</div>
+                    <div className="mt-1 text-sm text-[#6a645b]">
+                      Indexed documents
+                    </div>
                   </div>
-                  <p className="text-xl font-medium leading-8 tracking-[-0.01em]">
-                    What retention windows are available for enterprise
-                    customers?
-                  </p>
+                  <div className="rounded-3xl border border-black/10 bg-white p-4">
+                    <div className="text-2xl font-semibold">{chunkCount}</div>
+                    <div className="mt-1 text-sm text-[#6a645b]">
+                      Searchable chunks
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-4 rounded-3xl bg-[#fff4d7] p-5">
-                  <p className="text-sm leading-7 text-[#5d4a1b]">
-                    Enterprise customers may request 30-day, 90-day, or 365-day
-                    retention windows. When a document is deleted, its chunks
-                    and embeddings should also be removed from the vector
-                    database.
-                  </p>
-                  <div className="mt-4 flex gap-2">
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-medium">
-                      [1] Security policy.pdf
-                    </span>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-medium">
-                      Confidence 0.93
-                    </span>
+                <div className="mt-4 rounded-3xl border border-black/10 bg-white p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm text-[#6a645b]">
+                    <Search size={16} />
+                    Next step
                   </div>
+                  <p className="text-xl font-medium leading-8 tracking-[-0.01em]">
+                    Connect the RAG question flow to ask documents and inspect
+                    citations.
+                  </p>
                 </div>
               </div>
             </section>
