@@ -100,4 +100,4 @@ Retrieval Trace In UI
 
 ### Backend API
 
-![Backend Swagger docs](./docs/images/backend-docs.png)
+![Backend Swagger docs](./docs/images/backend.png)
