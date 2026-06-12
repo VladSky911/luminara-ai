@@ -13,6 +13,9 @@ from app.services.embeddings import embed_texts
 from app.schemas.search import SearchRequest, SearchResult
 from app.services.vector_store import semantic_search
 
+from app.schemas.answers import AskRequest, AskResponse
+from app.services.generation import build_citations, generate_answer
+
 settings = get_settings()
 
 app = FastAPI(
@@ -75,6 +78,17 @@ async def get_embedding_preview(document_id: str) -> list[EmbeddingPreview]:
 @app.post("/search", response_model=list[SearchResult])
 async def search(request: SearchRequest) -> list[SearchResult]:
     return await semantic_search(request.query, request.top_k)
+
+@app.post("/ask", response_model=AskResponse)
+async def ask(request: AskRequest) -> AskResponse:
+    results = await semantic_search(request.question, request.top_k)
+    answer = await generate_answer(request.question, results, request.mode)
+
+    return AskResponse(
+        answer=answer,
+        citations=build_citations(results),
+        retrieval_trace=results,
+    )
 
 
 @app.post("/documents", response_model=DocumentUploadResponse)

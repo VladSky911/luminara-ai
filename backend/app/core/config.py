@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     backend_cors_origins: str = "http://localhost:3000"
 
     openai_api_key: str = ""
+    openai_chat_model: str = "gpt-4.1-mini"
     openai_embedding_model: str = "text-embedding-3-small"
 
     qdrant_url: str = "http://localhost:6333"
