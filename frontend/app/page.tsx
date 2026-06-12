@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
   UploadCloud,
+  Trash2,
 } from "lucide-react";
 
 import {
@@ -21,6 +22,7 @@ import {
   askKnowledgeBase,
   fetchDocuments,
   uploadDocument,
+  deleteDocument,
 } from "@/lib/api";
 
 function formatBytes(bytes: number) {
@@ -46,6 +48,9 @@ export default function Home() {
   const [mode, setMode] = useState<AskMode>("strict");
   const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [error, setError] = useState("");
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null,
+  );
 
   const indexedCount = useMemo(
     () => documents.filter((document) => document.status === "indexed").length,
@@ -68,6 +73,30 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to load documents");
     } finally {
       setLoadingDocuments(false);
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string, filename: string) {
+    const confirmed = window.confirm(
+      `Delete "${filename}" from the knowledge base?`,
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+    setDeletingDocumentId(documentId);
+
+    try {
+      await deleteDocument(documentId);
+      setDocuments((current) =>
+        current.filter((document) => document.id !== documentId),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to delete document",
+      );
+    } finally {
+      setDeletingDocumentId(null);
     }
   }
 
@@ -231,6 +260,7 @@ export default function Home() {
                         <div
                           className={`mt-1 h-3 w-3 rounded-full ${statusTone(doc.status)}`}
                         />
+
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-medium">
                             {doc.filename}
@@ -242,6 +272,22 @@ export default function Home() {
                             {formatBytes(doc.size_bytes)}
                           </div>
                         </div>
+
+                        <button
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-[#8a8378] transition hover:bg-[#fff0ec] hover:text-[#b9412c] disabled:opacity-50"
+                          disabled={deletingDocumentId === doc.id}
+                          onClick={() =>
+                            handleDeleteDocument(doc.id, doc.filename)
+                          }
+                          title="Delete document"
+                          type="button"
+                        >
+                          {deletingDocumentId === doc.id ? (
+                            <Loader2 className="animate-spin" size={16} />
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
+                        </button>
                       </div>
                     </article>
                   ))

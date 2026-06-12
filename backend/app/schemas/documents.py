@@ -31,3 +31,8 @@ class DocumentRecord(BaseModel):
 class DocumentUploadResponse(BaseModel):
     document: DocumentRecord
     message: str
+
+
+class DocumentDeleteResponse(BaseModel):
+    document_id: str
+    message: str

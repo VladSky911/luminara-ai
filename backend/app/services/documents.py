@@ -3,7 +3,7 @@ from fastapi import UploadFile
 from app.schemas.documents import DocumentChunk, DocumentRecord
 from app.services.chunking import chunk_text
 from app.services.text_extraction import extract_text
-from app.services.vector_store import index_document_chunks
+from app.services.vector_store import delete_points, index_document_chunks
 
 DOCUMENTS: dict[str, DocumentRecord] = {}
 DOCUMENT_CHUNKS: dict[str, list[DocumentChunk]] = {}
@@ -44,3 +44,17 @@ def list_documents() -> list[DocumentRecord]:
 
 def get_document_chunks(document_id: str) -> list[DocumentChunk]:
     return DOCUMENT_CHUNKS.get(document_id, [])
+
+def delete_document(document_id: str) -> bool:
+    document = DOCUMENTS.get(document_id)
+
+    if not document:
+        return False
+
+    chunks = DOCUMENT_CHUNKS.get(document_id, [])
+    delete_points([chunk.id for chunk in chunks])
+
+    DOCUMENTS.pop(document_id, None)
+    DOCUMENT_CHUNKS.pop(document_id, None)
+
+    return True

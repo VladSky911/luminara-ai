@@ -4,11 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.schemas.documents import (
     DocumentChunk,
+    DocumentDeleteResponse,
     DocumentRecord,
     DocumentUploadResponse,
     EmbeddingPreview,
 )
-from app.services.documents import create_document, get_document_chunks, list_documents
+from app.services.documents import (
+    create_document,
+    delete_document,
+    get_document_chunks,
+    list_documents,
+)
 from app.services.embeddings import embed_texts
 from app.schemas.search import SearchRequest, SearchResult
 from app.services.vector_store import semantic_search
@@ -74,6 +80,18 @@ async def get_embedding_preview(document_id: str) -> list[EmbeddingPreview]:
         )
         for chunk, vector in zip(chunks[:3], vectors, strict=True)
     ]
+
+@app.delete("/documents/{document_id}", response_model=DocumentDeleteResponse)
+def remove_document(document_id: str) -> DocumentDeleteResponse:
+    deleted = delete_document(document_id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    return DocumentDeleteResponse(
+        document_id=document_id,
+        message="Document and indexed vectors deleted successfully.",
+    )
 
 @app.post("/search", response_model=list[SearchResult])
 async def search(request: SearchRequest) -> list[SearchResult]:

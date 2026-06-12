@@ -101,3 +101,14 @@ export async function askKnowledgeBase(
     throw error;
   }
 }
+
+export async function deleteDocument(documentId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/documents/${documentId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.detail ?? "Failed to delete document");
+  }
+}

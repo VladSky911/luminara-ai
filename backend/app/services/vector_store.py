@@ -1,5 +1,5 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, PointIdsList, PointStruct, VectorParams
 
 from app.core.config import get_settings
 from app.schemas.documents import DocumentChunk, DocumentRecord
@@ -91,3 +91,15 @@ async def semantic_search(query: str, top_k: int) -> list[SearchResult]:
         )
 
     return search_results
+
+def delete_points(point_ids: list[str]) -> None:
+    if not point_ids:
+        return
+
+    ensure_collection()
+
+    client = get_qdrant_client()
+    client.delete(
+        collection_name=get_settings().qdrant_collection,
+        points_selector=PointIdsList(points=point_ids),
+    )
