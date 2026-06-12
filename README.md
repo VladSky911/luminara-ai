@@ -88,16 +88,16 @@ Retrieval Trace In UI
 
 ### Dashboard
 
-![Luminara AI dashboard](docs/images/dashboard.png)
+![Luminara AI dashboard](./docs/images/dashboard.png)
 
 ### RAG Answer With Citations
 
-![RAG answer with citations](docs/images/ask-flow.png)
+![RAG answer with citations](./docs/images/ask-flow.png)
 
 ### Source Trace
 
-![Source trace panel](docs/images/source-trace.png)
+![Source trace panel](./docs/images/source-trace.png)
 
-### Backend
+### Backend API
 
-![Source trace panel](docs/images/backend.png)
+![Backend Swagger docs](./docs/images/backend-docs.png)
