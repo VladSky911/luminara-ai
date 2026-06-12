@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot,
   FileText,
@@ -14,15 +14,14 @@ import {
   UploadCloud,
 } from "lucide-react";
 
-import { DocumentRecord, fetchDocuments, uploadDocument } from "@/lib/api";
-
-const traces = [
-  {
-    title: "Waiting for search",
-    score: "0.00",
-    text: "Upload documents first. Retrieval traces will appear here once questions are connected to the RAG endpoint.",
-  },
-];
+import {
+  AskMode,
+  AskResponse,
+  DocumentRecord,
+  askKnowledgeBase,
+  fetchDocuments,
+  uploadDocument,
+} from "@/lib/api";
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -42,6 +41,10 @@ export default function Home() {
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [question, setQuestion] = useState("What does the knowledge base say?");
+  const [mode, setMode] = useState<AskMode>("strict");
+  const [answer, setAnswer] = useState<AskResponse | null>(null);
   const [error, setError] = useState("");
 
   const indexedCount = useMemo(
@@ -92,6 +95,25 @@ export default function Home() {
     }
   }
 
+  async function handleAsk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (question.trim().length < 3) return;
+
+    setError("");
+    setAsking(true);
+
+    try {
+      setAnswer(await askKnowledgeBase(question.trim(), mode));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to ask knowledge base",
+      );
+    } finally {
+      setAsking(false);
+    }
+  }
+
   useEffect(() => {
     loadDocuments();
   }, []);
@@ -132,8 +154,8 @@ export default function Home() {
               <Gauge size={16} />
               Retrieval mode
             </div>
-            <div className="mt-3 rounded-2xl bg-[#d9ff8f] px-3 py-2 text-sm font-semibold text-[#171412]">
-              Strict grounding
+            <div className="mt-3 rounded-2xl bg-[#d9ff8f] px-3 py-2 text-sm font-semibold capitalize text-[#171412]">
+              {mode} grounding
             </div>
           </div>
         </aside>
@@ -241,7 +263,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="mb-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-3xl border border-black/10 bg-white p-4">
                     <div className="text-2xl font-semibold">{indexedCount}</div>
                     <div className="mt-1 text-sm text-[#6a645b]">
@@ -256,16 +278,66 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="mt-4 rounded-3xl border border-black/10 bg-white p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm text-[#6a645b]">
-                    <Search size={16} />
-                    Next step
+                <form className="space-y-4" onSubmit={handleAsk}>
+                  <textarea
+                    className="min-h-36 w-full resize-none rounded-3xl border border-black/10 bg-white p-4 text-base leading-7 outline-none transition focus:border-[#b8872f]"
+                    value={question}
+                    onChange={(event) => setQuestion(event.target.value)}
+                  />
+
+                  <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
+                    <div className="grid grid-cols-3 rounded-2xl border border-black/10 bg-white p-1 text-sm">
+                      {(["strict", "balanced", "exploratory"] as AskMode[]).map(
+                        (item) => (
+                          <button
+                            key={item}
+                            className={`rounded-xl px-3 py-2 capitalize transition ${
+                              mode === item
+                                ? "bg-[#171412] text-white"
+                                : "text-[#6a645b]"
+                            }`}
+                            onClick={() => setMode(item)}
+                            type="button"
+                          >
+                            {item}
+                          </button>
+                        ),
+                      )}
+                    </div>
+
+                    <button
+                      className="flex items-center justify-center gap-2 rounded-2xl bg-[#d9ff8f] px-5 py-3 text-sm font-semibold text-[#171412] disabled:opacity-60"
+                      disabled={asking || question.trim().length < 3}
+                      type="submit"
+                    >
+                      {asking ? (
+                        <Loader2 className="animate-spin" size={17} />
+                      ) : (
+                        <Search size={17} />
+                      )}
+                      {asking ? "Retrieving" : "Ask"}
+                    </button>
                   </div>
-                  <p className="text-xl font-medium leading-8 tracking-[-0.01em]">
-                    Connect the RAG question flow to ask documents and inspect
-                    citations.
-                  </p>
-                </div>
+                </form>
+
+                {answer ? (
+                  <div className="mt-5 rounded-3xl bg-[#fff4d7] p-5">
+                    <p className="whitespace-pre-wrap text-sm leading-7 text-[#5d4a1b]">
+                      {answer.answer}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {answer.citations.map((citation, index) => (
+                        <span
+                          key={citation.chunk_id}
+                          className="rounded-full bg-white px-3 py-1 text-xs font-medium"
+                        >
+                          [{index + 1}] {citation.filename}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </section>
 
@@ -273,22 +345,41 @@ export default function Home() {
               <h2 className="mb-4 font-semibold">Source trace</h2>
 
               <div className="space-y-3">
-                {traces.map((trace) => (
-                  <article
-                    key={trace.title}
-                    className="rounded-3xl border border-black/10 bg-white p-4"
-                  >
+                {(answer?.retrieval_trace ?? []).length === 0 ? (
+                  <article className="rounded-3xl border border-black/10 bg-white p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <div className="truncate font-medium">{trace.title}</div>
+                      <div className="truncate font-medium">
+                        Waiting for question
+                      </div>
                       <div className="rounded-full bg-[#171412] px-3 py-1 text-xs text-white">
-                        {trace.score}
+                        0.00
                       </div>
                     </div>
                     <p className="text-sm leading-6 text-[#625d54]">
-                      {trace.text}
+                      Ask a question to inspect retrieved chunks, source files,
+                      and semantic scores.
                     </p>
                   </article>
-                ))}
+                ) : (
+                  answer?.retrieval_trace.map((trace) => (
+                    <article
+                      key={trace.chunk_id}
+                      className="rounded-3xl border border-black/10 bg-white p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="truncate font-medium">
+                          {trace.filename}
+                        </div>
+                        <div className="rounded-full bg-[#171412] px-3 py-1 text-xs text-white">
+                          {trace.score.toFixed(2)}
+                        </div>
+                      </div>
+                      <p className="line-clamp-6 text-sm leading-6 text-[#625d54]">
+                        {trace.text}
+                      </p>
+                    </article>
+                  ))
+                )}
               </div>
             </section>
           </div>

@@ -68,12 +68,12 @@ async def semantic_search(query: str, top_k: int) -> list[SearchResult]:
     query_vector = (await embed_texts([query]))[0]
     client = get_qdrant_client()
 
-    results = client.search(
-        collection_name=get_settings().qdrant_collection,
-        query_vector=query_vector,
-        limit=top_k,
-        with_payload=True,
-    )
+    results = client.query_points(
+    collection_name=get_settings().qdrant_collection,
+    query=query_vector,
+    limit=top_k,
+    with_payload=True,
+).points
 
     search_results: list[SearchResult] = []
 

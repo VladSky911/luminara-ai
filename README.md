@@ -28,3 +28,15 @@ The project combines document ingestion, embeddings, vector search, source citat
 - [ ] Citations
 - [ ] Retrieval trace
 - [ ] Dashboard
+
+## Demo Documents
+
+Use the files in `sample_documents` to test the full RAG flow quickly.
+
+Recommended questions:
+
+```text
+What retention windows are available for enterprise customers?
+What are the phases of enterprise customer onboarding?
+What happens when a document is deleted?
+```
